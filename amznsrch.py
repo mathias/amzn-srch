@@ -62,12 +62,12 @@ import urllib
 
 def get_api_config(apikeyfile):
     """Check configuration file and return contents"""
-    
+
     # Define regular expressions for data validation of API config parameters
     access_key_re = '^[A-Za-z0-9]{20}$'
     secret_key_re = '^[A-Za-z0-9/+]{40}$'
     associate_tag_re = '^\d{4}-\d{4}-\d{4}$'
-    
+
     # Check validity of API key file before returning contents as a list
     if os.path.isfile(apikeyfile) and os.access(apikeyfile, os.R_OK):
         try:
@@ -89,33 +89,33 @@ def get_api_config(apikeyfile):
     else:
         print("Can't find or read Amazon API key file named: " + apikeyfile)
         sys.exit(1)
-    
+
 def main(num_items, heading_level, args):
     """Main routine"""
-        
+
     # Retrieve the contents of the API key file
     apikey = get_api_config('.amznrc')
-        
+
     # Create AmazonScraper object using API key
     amznscpr = AmazonScraper(*apikey)
-    
+
     # Check keyword list entered on the command line
     if len(args) < 1:
         print('Missing search terms. For usage help: python amznsrch.py -h')
         sys.exit(1)
-    
+
     # Loop through quoted lists of search terms from command line arguments
     for arg in args:
-    
+
         # Print search terms as a markdown heading
         srch_terms = str(arg)
         if heading_level > 0 and heading_level < 7:
             print '\n' + '#' * heading_level + ' ' + srch_terms + '\n'
-        
+
         # Fetch and return results
         for item in itertools.islice(amznscpr.search(
             Keywords = srch_terms, SearchIndex='Books'), num_items):
-            
+
             # Skip if no title, else encode, remove parenthetical text, & quote
             if not item.title:
                 continue
@@ -123,66 +123,66 @@ def main(num_items, heading_level, args):
                 bktitle = item.title.encode('utf8')
                 bktitle = re.sub('\s*[(\[].*[)\]]', '', bktitle)
                 bktitlesrch = urllib.quote_plus('"' + bktitle + '"')
-            
+
             # Encode author, if present, and format for printing
             if not item.author:
                 bkauthor = ''
             else:
                 bkauthor = 'by ' + item.author.encode('utf8')
-            
+
             # Add associate tag to item URL
             bkurl = str(item.url) + '/?tag=' + apikey[2]
-            
+
             # Construct links as desired
             amzn = '[AMZN](' + bkurl + ')'
-            goog = ('[GOOG]' + '(https://www.google.com/' + 
-                    'search?tbo=p&tbm=bks&q=intitle:' + 
+            goog = ('[GOOG]' + '(https://www.google.com/' +
+                    'search?tbo=p&tbm=bks&q=intitle:' +
                     bktitlesrch + '&num=10&gws_rd=ssl)')
-            spl = ('[SPL](https://seattle.bibliocommons.com/search?' + 
-                   't=title&search_category=title&q=' + bktitlesrch + 
+            spl = ('[SPL](https://seattle.bibliocommons.com/search?' +
+                   't=title&search_category=title&q=' + bktitlesrch +
                    '&commit=Search)')
-            uwl = ('[UW](http://alliance-primo.hosted.exlibrisgroup.com/' + 
-                   'primo_library/libweb/action/search.do?fn=search&' + 
-                   'ct=search&vid=UW&vl%28753972432UI0%29=title&' + 
-                   'vl%281UIStartWith0%29=starts+with&vl%28freeText0%29=' + 
+            uwl = ('[UW](http://alliance-primo.hosted.exlibrisgroup.com/' +
+                   'primo_library/libweb/action/search.do?fn=search&' +
+                   'ct=search&vid=UW&vl%28753972432UI0%29=title&' +
+                   'vl%281UIStartWith0%29=starts+with&vl%28freeText0%29=' +
                     bktitlesrch + '&Submit=Search)')
             # Searching UW Libraries through WorldCat to be deprecated 2015-09
-            #uwl = ('[UW](http://uwashington.worldcat.org' + 
+            #uwl = ('[UW](http://uwashington.worldcat.org' +
             #       '/search?q=ti%3A' + bktitlesrch + '&qt=advanced)')
-            
+
             # Print markdown for title, author, and links as bulleted list item
-            print('- _' + bktitle + '_ ' + bkauthor + 
+            print('- _' + bktitle + '_ ' + bkauthor +
                  ' ( ' + goog + ' | ' + amzn + ' | ' + spl + ' | ' + uwl + ' )')
 
 def get_parser():
     """Parse command line arguments"""
-    
+
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     parser = ArgumentParser(description=__doc__,
                             formatter_class=ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-n', '--num-items',
         dest = 'num_items',
-        type=int, 
+        type=int,
         default = 5,
         help="Number of items to return, default: 5" )
-    
-    parser.add_argument('-l', '--heading-level', 
+
+    parser.add_argument('-l', '--heading-level',
         dest = 'heading_level',
-        type=int, 
+        type=int,
         default = 3,
         help="Markdown heading level, default: 3, no heading: 0" )
-        
-    parser.add_argument('-v', '--version', 
-        action='version', 
+
+    parser.add_argument('-v', '--version',
+        action='version',
         version='%(prog)s ' + vers_date + ' ' + repos_url)
-    
-    parser.add_argument('args', 
-        help="Quoted list(s) of search terms, space-delimited", 
+
+    parser.add_argument('args',
+        help="Quoted list(s) of search terms, space-delimited",
         nargs=argparse.REMAINDER)
-        
+
     return parser
-    
+
 if __name__ == "__main__":
     """Get command-line arguments and hand them off to main()"""
     args = get_parser().parse_args()
